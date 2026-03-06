@@ -1,486 +1,326 @@
 dataset:
-name: balls
-description: >
-IPL ball-by-ball dataset. Each row represents a delivery event within an innings.
-Illegal deliveries (wides, no-balls) are also recorded as rows, therefore multiple
-rows may share the same over and ball values.
+  name: balls
+  description: >
+    IPL ball-by-ball dataset. Each row represents a single delivery event.
+    Illegal deliveries (wides, no-balls) are included, meaning multiple rows 
+    may share the same over and ball values.
 
 grain:
-description: "One row = one delivery event"
-primary_key: column00
+  description: "One row per delivery event."
+  primary_key: column00
 
 ordering:
-chronological_column: ball_no
-note: >
-ball_no determines chronological order within an innings.
-Multiple rows may share the same over and ball due to illegal deliveries.
+  chronological_column: ball_no
+  note: >
+    ball_no determines the chronological sequence within an innings. 
+    Note that illegal deliveries may result in repeating ball numbers.
 
 query_guardrails:
-
-sql_safety_rules:
-
-```
-allowed_operations:
-  - SELECT
-  - WITH
-  - GROUP BY
-  - ORDER BY
-  - LIMIT
-  - HAVING
-  - WHERE
-  - JOIN
-  - DISTINCT
-
-forbidden_operations:
-  - DELETE
-  - UPDATE
-  - INSERT
-  - DROP
-  - ALTER
-  - TRUNCATE
-  - CREATE
-
-instructions: >
-  This database is strictly read-only.
-  The AI must never generate queries that modify the database.
-  Only SELECT-based analytical queries are allowed.
-
-  If a user request implies modifying data (update, delete, correction),
-  the AI must refuse and explain that the database is read-only.
-```
+  sql_safety_rules:
+    allowed_operations:
+      - SELECT
+      - WITH
+      - GROUP BY
+      - ORDER BY
+      - LIMIT
+      - HAVING
+      - WHERE
+      - JOIN
+      - DISTINCT
+    forbidden_operations:
+      - DELETE
+      - UPDATE
+      - INSERT
+      - DROP
+      - ALTER
+      - TRUNCATE
+      - CREATE
+    instructions: >
+      This database is strictly read-only. The AI must only generate SELECT-based 
+      analytical queries and must refuse any requests to modify data.
 
 entity_resolution:
-
-description: >
-Users may refer to players, teams, venues, cities, or officials
-using different spellings, abbreviations, initials, or partial names.
-The AI must resolve these to the closest matching values present
-in the dataset before constructing SQL queries.
-
-entity_types:
-
-```
-players:
-  columns:
-    - batter
-    - bowler
-    - non_striker
-    - player_out
-    - new_batter
-    - next_batter
-    - player_of_match
-    - review_batter
-
-  resolution_strategy:
-    - Normalize case
-    - Ignore punctuation
-    - Match initials with full names
-    - Use fuzzy similarity
-    - Prefer exact dataset match
-
-  examples:
-    - user_input: "Virat Kohli"
-      possible_dataset_values:
-        - "V Kohli"
-        - "V. Kohli"
-
-    - user_input: "Rohit Sharma"
-      possible_dataset_values:
-        - "RG Sharma"
-
-    - user_input: "Brendon McCullum"
-      possible_dataset_values:
-        - "BB McCullum"
-
-teams:
-  columns:
-    - batting_team
-    - bowling_team
-    - toss_winner
-    - match_won_by
-    - superover_winner
-    - team_reviewed
-
-  resolution_strategy:
-    - Match abbreviations to full team names
-    - Use fuzzy matching
-    - Prefer exact dataset match
-
-  examples:
-    - user_input: "KKR"
-      dataset_value: "Kolkata Knight Riders"
-
-    - user_input: "MI"
-      dataset_value: "Mumbai Indians"
-
-    - user_input: "RCB"
-      dataset_value: "Royal Challengers Bangalore"
-
-venues:
-  columns:
-    - venue
-
-  resolution_strategy:
-    - Normalize spelling
-    - Use fuzzy similarity
-    - Prefer dataset value
-
-cities:
-  columns:
-    - city
-
-  resolution_strategy:
-    - Case-insensitive matching
-    - Fuzzy matching allowed
-
-umpires:
-  columns:
-    - umpire
-
-  resolution_strategy:
-    - Initial matching
-    - Fuzzy name matching
-```
+  description: >
+    Resolve variations in names for players, teams, and venues to the 
+    standardized values present in the dataset using fuzzy matching and initials.
+  entity_types:
+    players:
+      columns:
+        - batter
+        - bowler
+        - non_striker
+        - player_out
+        - new_batter
+        - next_batter
+        - player_of_match
+        - review_batter
+      resolution_strategy:
+        - Normalize case and ignore punctuation
+        - Match initials with full names (e.g., "V Kohli" for "Virat Kohli")
+        - Use fuzzy similarity preferring exact dataset matches
+      examples:
+        - user_input: "Virat Kohli"
+          possible_dataset_values: ["V Kohli", "V. Kohli"]
+        - user_input: "Rohit Sharma"
+          possible_dataset_values: ["RG Sharma"]
+    teams:
+      columns:
+        - batting_team
+        - bowling_team
+        - toss_winner
+        - match_won_by
+        - superover_winner
+        - team_reviewed
+      resolution_strategy:
+        - Map common abbreviations (KKR, MI, RCB) to full team names
+        - Prefer exact dataset matches
+    venues:
+      columns:
+        - venue
+      resolution_strategy:
+        - Normalize spelling and use fuzzy matching
+    cities:
+      columns:
+        - city
+      resolution_strategy:
+        - Case-insensitive fuzzy matching
+    umpires:
+      columns:
+        - umpire
+      resolution_strategy:
+        - Match via initials and fuzzy name similarity
 
 ambiguity_handling:
-
-duplicate_names:
-
-```
-description: >
-  Multiple players may share similar or identical names.
-  If multiple dataset matches exist, the AI must identify the
-  most likely match based on context such as season, team,
-  or role (batter vs bowler).
-```
-
-ambiguity_resolution_rules:
-
-```
-- Prefer exact match in dataset
-- Prefer player appearing most frequently
-- Prefer player active in relevant season
-- If still ambiguous, return results for all matching entities
-```
-
-misspelling_handling:
-
-```
-description: >
-  User inputs may contain spelling errors.
-  The AI should use fuzzy matching techniques to identify
-  the closest matching dataset value.
-
-examples:
-  - user_input: "Brendon McCullom"
-    corrected_entity: "BB McCullum"
-
-  - user_input: "Virat Kohly"
-    corrected_entity: "V Kohli"
-```
-
+  duplicate_names:
+    description: >
+      If multiple players share similar names, resolve using context 
+      such as season, team, or player role.
+  ambiguity_resolution_rules:
+    - Prefer exact dataset matches
+    - Use frequency of appearance or active season to break ties
+    - Return results for all matches if ambiguity persists
+  misspelling_handling:
+    description: >
+      Apply fuzzy matching to correct user typographical errors 
+      to the closest dataset entity.
 
 reliability_flags:
-unreliable_columns:
-- runs_not_boundary
-partially_reliable_columns:
-- new_batter
+  unreliable_columns:
+    - runs_not_boundary
+  partially_reliable_columns:
+    - new_batter
 
 tables:
-
-balls:
-
-```
-columns:
-
-  column00: or ROW Index
-    type: BIGINT
-    role: primary_key
-    description: Unique row identifier from source dataset.
-
-  match_id:
-    type: BIGINT
-    description: Unique identifier of match.
-
-  date:
-    type: DATE
-    description: Match date. Format is YYYY-MM-DD
-
-  match_type:
-    type: VARCHAR
-    description: Match format classification. Since this IPL data, it is T20 everywhere
-
-  event_name:
-    type: VARCHAR
-    description: Tournament name. Since this is IPL data, it is Indian Premier League everywhere
-
-  season:
-    type: VARCHAR
-    description: Season identifier.
-
-  stage:
-    type: VARCHAR
-    description: Stage of tournament (group, qualifier, final etc).
-
-  event_match_no:
-    type: VARCHAR
-    description: Match number within tournament.
-
-  match_number:
-    type: VARCHAR
-    description: Alternate match numbering. Not reliable, do not use in analysis
-
-  innings:
-    type: BIGINT
-    description: Innings number within match. This would be usually 1 or 2, but in case of super over it could be 3,4,5 or 6 depending upon the game
-
-  batting_team:
-    type: VARCHAR
-    description: Team currently batting.
-
-  bowling_team:
-    type: VARCHAR
-    description: Team currently bowling.
-
-  over:
-    type: BIGINT
-    description: Over number starting from 0. It reads 0 then it is the first over, it read 19 then it is 20th over of the innings, etc.
-
-  ball:
-    type: BIGINT
-    description: Ball index within over. May repeat due to wides/no-balls/extras.
-
-  ball_no:
-    type: DOUBLE
-    description: Decimal representation of delivery order. It will be read 0.1,0.2, 0.3, etc. May repeat due to wides/no-balls/extras.
-
-  batter:
-    type: VARCHAR
-    description: Striker on this delivery.
-
-  bat_pos:
-    type: BIGINT
-    description: Batting order position.
-
-  non_striker:
-    type: VARCHAR
-    description: Non-striker batter.
-
-  non_striker_pos:
-    type: BIGINT
-    description: Batting order position of non-striker.
-
-  bowler:
-    type: VARCHAR
-    description: Bowler delivering this ball.
-
-  valid_ball:
-    type: BIGINT
-    description: >
-      Indicates whether delivery is legal.
-      1 = legal delivery
-      0 = illegal delivery (wide, no-ball etc).
-
-  balls_faced:
-    type: BIGINT
-    description: >
-      As per standard rules - Indicates if delivery counts toward batter's balls faced tally.
-      Example: wides = 0, no-balls = 1, leg-bys = 1
-
-  runs_batter:
-    type: BIGINT
-    description: Runs scored off the bat on this delivery.
-
-  runs_extras:
-    type: BIGINT
-    description: Runs scored as extras.
-
-  runs_total:
-    type: BIGINT
-    description: Total runs scored on delivery (runs_batter + runs_extras).
-
-  runs_bowler:
-    type: BIGINT
-    description: >
-      Runs credited to bowler including wides and no-balls.
-      Does not include byes or leg-byes.
-
-  runs_not_boundary:
-    type: BOOLEAN
-    reliability: unreliable
-    description: Column marked unreliable and should not be used for analytics.
-
-  extra_type:
-    type: VARCHAR
-    description: Type of extra (wide, no-ball, bye, leg-bye).
-
-  wicket_kind:
-    type: VARCHAR
-    description: Dismissal type.
-
-  player_out:
-    type: VARCHAR
-    description: Player dismissed on this delivery.
-
-  striker_out:
-    type: BOOLEAN
-    description: >
-      TRUE if striker was dismissed.
-      FALSE if non-striker dismissed or no dismissal occurred.
-
-  fielders:
-    type: VARCHAR
-    description: Fielders involved in dismissal.
-
-  runs_target:
-    type: DOUBLE
-    description: Target runs for chasing team.
-
-  review_batter:
-    type: VARCHAR
-    description: Batter involved in DRS review.
-
-  team_reviewed:
-    type: VARCHAR
-    description: Team requesting review.
-
-  review_decision:
-    type: VARCHAR
-    description: Outcome of review.
-
-  umpire:
-    type: VARCHAR
-    description: Umpire responsible for decision.
-
-  umpires_call:
-    type: BOOLEAN
-    description: Indicates if decision relied on umpire's call.
-
-  player_of_match:
-    type: VARCHAR
-    description: Player awarded player of the match.
-
-  match_won_by:
-    type: VARCHAR
-    description: Team winning the match.
-
-  win_outcome:
-    type: VARCHAR
-    description: Type of win (runs, wickets etc).
-
-  toss_winner:
-    type: VARCHAR
-    description: Team winning the toss.
-
-  toss_decision:
-    type: VARCHAR
-    description: Toss decision (bat or field).
-
-  venue:
-    type: VARCHAR
-    description: Stadium name.
-
-  city:
-    type: VARCHAR
-    description: City where match took place.
-
-  day:
-    type: BIGINT
-    description: Day component of match date.
-
-  month:
-    type: BIGINT
-    description: Month component of match date.
-
-  year:
-    type: BIGINT
-    description: Year component of match date.
-
-  gender:
-    type: VARCHAR
-    description: Gender category of competition. It is all male
-
-  team_type:
-    type: VARCHAR
-    description: Competition team classification.
-
-  superover_winner:
-    type: VARCHAR
-    description: Winner of super over if applicable.
-
-  result_type:
-    type: VARCHAR
-    description: Match result classification. Tie, D/L, etc.
-
-  method:
-    type: VARCHAR
-    description: Match decision method (D/L or NULL/NA is normal).
-
-  balls_per_over:
-    type: BIGINT
-    description: Number of balls per over. This is constantly 6, since it is a structured tournament
-
-  overs:
-    type: BIGINT
-    description: Maximum overs allowed in innings. This is always 20. May very incase of superovers.
-
-  team_runs:
-    type: BIGINT
-    description: Cumulative runs of batting team after this delivery.
-
-  team_balls:
-    type: BIGINT
-    description: Cumulative legal balls faced by batting team.
-
-  team_wicket:
-    type: BIGINT
-    description: Cumulative wickets lost by batting team.
-
-  new_batter:
-    type: VARCHAR
-    reliability: partially_reliable
-    description: Incoming batter after dismissal.
-
-  batter_runs:
-    type: BIGINT
-    description: Batter cumulative runs after this ball.
-
-  batter_balls:
-    type: BIGINT
-    description: Batter cumulative balls faced after this ball.
-
-  bowler_wicket:
-    type: BIGINT
-    description: Cumulative wickets credited to bowler.
-
-  batting_partners:
-    type: VARCHAR
-    description: Tuple representing batting pair. Example: ('BB McCullum', 'SC Ganguly') , ('BB McCullum', 'RT Ponting')
-
-  next_batter:
-    type: VARCHAR
-    description: Next batter expected. Not highly reliable
-```
+  balls:
+    columns:
+      column00:
+        type: BIGINT
+        role: primary_key
+        description: Unique row identifier/Index from the source dataset.
+      match_id:
+        type: BIGINT
+        description: Unique identifier for each match.
+      date:
+        type: DATE
+        description: Match date in YYYY-MM-DD format.
+      match_type:
+        type: VARCHAR
+        description: Match format; typically 'T20' for IPL data.
+      event_name:
+        type: VARCHAR
+        description: Tournament name (Indian Premier League).
+      season:
+        type: VARCHAR
+        description: The year or identifier of the IPL season.
+      stage:
+        type: VARCHAR
+        description: Tournament phase (e.g., Group, Qualifier, Final).
+      event_match_no:
+        type: VARCHAR
+        description: Sequential match number within the tournament.
+      match_number:
+        type: VARCHAR
+        description: Alternate match numbering; use with caution for analysis.
+      innings:
+        type: BIGINT
+        description: Innings number (1 or 2; Super Overs may use 3-6).
+      batting_team:
+        type: VARCHAR
+        description: Name of the team currently batting.
+      bowling_team:
+        type: VARCHAR
+        description: Name of the team currently bowling.
+      over:
+        type: BIGINT
+        description: 0-indexed over number (0 represents the 1st over, 19 represents the 20th).
+      ball:
+        type: BIGINT
+        description: Ball index within the over; repeats for illegal deliveries.
+      ball_no:
+        type: DOUBLE
+        description: Chronological delivery order in decimal format (e.g., 0.1, 0.2).
+      batter:
+        type: VARCHAR
+        description: Name of the striker facing the delivery.
+      bat_pos:
+        type: BIGINT
+        description: Batting order position of the striker.
+      non_striker:
+        type: VARCHAR
+        description: Name of the non-striking batter.
+      non_striker_pos:
+        type: BIGINT
+        description: Batting order position of the non-striker.
+      bowler:
+        type: VARCHAR
+        description: Name of the bowler delivering the ball.
+      valid_ball:
+        type: BIGINT
+        description: 1 for legal deliveries; 0 for illegal deliveries (wides, no-balls).
+      balls_faced:
+        type: BIGINT
+        description: Indicates if the delivery counts toward the batter's balls faced (e.g., 0 for wides).
+      runs_batter:
+        type: BIGINT
+        description: Runs scored specifically off the bat.
+      runs_extras:
+        type: BIGINT
+        description: Runs scored via extras (wides, no-balls, byes, leg-byes).
+      runs_total:
+        type: BIGINT
+        description: Total runs on the delivery (batter runs + extras).
+      runs_bowler:
+        type: BIGINT
+        description: Runs charged to the bowler (includes wides/no-balls; excludes byes/leg-byes).
+      runs_not_boundary:
+        type: BOOLEAN
+        reliability: unreliable
+        description: Indicates if runs were not from a boundary; currently unreliable.
+      extra_type:
+        type: VARCHAR
+        description: Classification of extra (wide, no-ball, bye, leg-bye).
+      wicket_kind:
+        type: VARCHAR
+        description: Type of dismissal (e.g., caught, bowled, run out).
+      player_out:
+        type: VARCHAR
+        description: Name of the player dismissed.
+      striker_out:
+        type: BOOLEAN
+        description: TRUE if the striker was dismissed; FALSE otherwise.
+      fielders:
+        type: VARCHAR
+        description: Names of fielders involved in the dismissal.
+      runs_target:
+        type: DOUBLE
+        description: Target runs required by the chasing team.
+      review_batter:
+        type: VARCHAR
+        description: Batter involved in a DRS review.
+      team_reviewed:
+        type: VARCHAR
+        description: The team that requested the DRS review.
+      review_decision:
+        type: VARCHAR
+        description: Outcome of the DRS review.
+      umpire:
+        type: VARCHAR
+        description: Name of the umpire making the decision.
+      umpires_call:
+        type: BOOLEAN
+        description: Indicates if the DRS result was "Umpire's Call".
+      player_of_match:
+        type: VARCHAR
+        description: Player awarded the Player of the Match title.
+      match_won_by:
+        type: VARCHAR
+        description: Name of the winning team.
+      win_outcome:
+        type: VARCHAR
+        description: Margin type of the victory (runs, wickets).
+      toss_winner:
+        type: VARCHAR
+        description: Team that won the toss.
+      toss_decision:
+        type: VARCHAR
+        description: Decision made after winning the toss (bat or field).
+      venue:
+        type: VARCHAR
+        description: Name of the stadium.
+      city:
+        type: VARCHAR
+        description: City where the match was held.
+      day:
+        type: BIGINT
+        description: Day component of the match date.
+      month:
+        type: BIGINT
+        description: Month component of the match date.
+      year:
+        type: BIGINT
+        description: Year component of the match date.
+      gender:
+        type: VARCHAR
+        description: Gender category of the players (constant: male).
+      team_type:
+        type: VARCHAR
+        description: Classification of the teams involved.
+      superover_winner:
+        type: VARCHAR
+        description: Winner of the super over, if one occurred.
+      result_type:
+        type: VARCHAR
+        description: Classification of the match result (e.g., normal, tie, DLS).
+      method:
+        type: VARCHAR
+        description: Win method used (e.g., D/L for rain-affected matches).
+      balls_per_over:
+        type: BIGINT
+        description: Number of legal deliveries per over (constant: 6).
+      overs:
+        type: BIGINT
+        description: Maximum scheduled overs for the innings (standard: 20).
+      team_runs:
+        type: BIGINT
+        description: Cumulative runs for the batting team at this point in the innings.
+      team_balls:
+        type: BIGINT
+        description: Cumulative legal balls faced by the batting team.
+      team_wicket:
+        type: BIGINT
+        description: Cumulative wickets lost by the batting team.
+      new_batter:
+        type: VARCHAR
+        reliability: partially_reliable
+        description: The batter entering the field after a dismissal.
+      batter_runs:
+        type: BIGINT
+        description: Cumulative runs scored by the batter in this innings.
+      batter_balls:
+        type: BIGINT
+        description: Cumulative legal balls faced by the batter in this innings.
+      bowler_wicket:
+        type: BIGINT
+        description: Cumulative wickets credited to the bowler.
+      batting_partners:
+        type: VARCHAR
+        description: Tuple representing the current batting pair (e.g., 'V Kohli', 'AB de Villiers').
+      next_batter:
+        type: VARCHAR
+        description: Predicted next batter; use with caution.
 
 metrics:
-
-powerplay:
-definition: "over between 0.1 and 5.6 including both ends"
-
-middle_overs:
-definition: "over between 6.1 and 14.6 including both ends"
-
-death_overs:
-definition: "over between 15.1 and 19.6 including both ends"
-
-strike_rate:
-definition: "(SUM(runs_batter) / SUM(balls_faced)) * 100"
-
-economy_rate:
-definition: "SUM(runs_bowler) / (SUM(valid_ball)/6)"
-
-dot_ball:
-definition: "runs_total = 0 AND valid_ball = 1"
-
-boundary:
-definition: "runs_batter IN (4,6)"
+  powerplay:
+    definition: "over between 0.1 and 5.6 (overs 0-5) inclusive."
+  middle_overs:
+    definition: "over between 6.1 and 14.6 (overs 6-14) inclusive."
+  death_overs:
+    definition: "over between 15.1 and 19.6 (overs 15-19) inclusive."
+  strike_rate:
+    definition: "(SUM(runs_batter) / SUM(balls_faced)) * 100"
+  economy_rate:
+    definition: "SUM(runs_bowler) / (SUM(valid_ball) / 6.0)"
+  dot_ball:
+    definition: "runs_total = 0 AND valid_ball = 1"
+  boundary:
+    definition: "runs_batter IN (4, 6)"
