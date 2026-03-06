@@ -17,9 +17,10 @@ def ask_cricket_question(question: str):
         "result": result.to_dict(orient="records")
     }
 
-# Create FastAPI app and mount MCP
+# Create FastAPI app and mount MCP protocol endpoints
 app = FastAPI()
 app.mount("/mcp", mcp.streamable_http_app())
+app.mount("/.well-known/mcp", mcp.streamable_http_app())
 
 @app.get("/")
 def health():
