@@ -24,7 +24,7 @@ The dataset is stored in a table named `balls`. Each row represents a single del
 | :--- | :--- | :--- |
 | `match_id` | BIGINT | Unique identifier for each match. |
 | `date` | DATE | Match date (YYYY-MM-DD). |
-| `season` | VARCHAR | IPL season (e.g., '2023'). |
+| `season` | VARCHAR | IPL season identifier (e.g., '2007/08' is 2008, '2011' is 2011). |
 | `innings` | BIGINT | 1 or 2 (Super Overs: 3-6). |
 | `batting_team` | VARCHAR | Team batting. |
 | `bowling_team` | VARCHAR | Team bowling. |

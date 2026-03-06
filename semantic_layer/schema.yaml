@@ -131,7 +131,10 @@ tables:
         description: Tournament name (Indian Premier League).
       season:
         type: VARCHAR
-        description: The year or identifier of the IPL season.
+        description: >
+          The identifier for the IPL season. Mapping notes: '2007/08' means the 
+          2008 season, '2009/10' means 2010, and single years (e.g., '2011') 
+          refer to that specific season.
       stage:
         type: VARCHAR
         description: Tournament phase (e.g., Group, Qualifier, Final).
