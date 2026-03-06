@@ -23,3 +23,17 @@ ipl-cricket-mcp
 │
 ├ requirements.txt
 └ README.md
+
+# IPL Cricket Analytics MCP
+
+AI-powered cricket analytics engine using:
+
+- DuckDB
+- Gemini LLM
+- MCP Server
+- ClickUp integration
+
+Dataset: 18 years IPL ball-by-ball data.
+
+Purpose:
+Learning MCP architecture and building a cricket analytics platform.
