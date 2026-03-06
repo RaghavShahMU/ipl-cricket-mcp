@@ -26,6 +26,14 @@ def get_top_batsmen(limit: int = 10):
 
     return run_sql(query)
 
+def test(limit: int = 10):
+    query = f"""
+    SELECT *
+    FROM balls
+    LIMIT 10
+    """
+
+    return run_sql(query)
 
 def get_top_bowlers(limit: int = 10):
     query = f"""
