@@ -16,5 +16,9 @@ def ask_cricket_question(question: str):
         "result": result.to_dict(orient="records")
     }
 
+# Expose FastAPI app object for cloud deployment
+app = mcp.streamable_http_app()
+
 if __name__ == "__main__":
-    mcp.run()
+    import uvicorn
+    uvicorn.run("mcp_server.server:app", host="0.0.0.0", port=8000)
