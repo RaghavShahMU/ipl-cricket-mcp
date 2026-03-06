@@ -2,7 +2,7 @@ duckdb
 pandas
 fastapi
 uvicorn
-google-genai
+# modelcontextprotocol (official SDK is 'mcp')
 mcp
+google-genai
 pyyaml
-# modelcontextprotocol (official MCP Python SDK is 'mcp')
