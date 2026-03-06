@@ -17,8 +17,10 @@ def ask_cricket_question(question: str):
     }
 
 if __name__ == "__main__":
-    # FastMCP uses environment variables for host and port
+    # FastMCP uses environment variables for host and port configuration
     os.environ["FASTMCP_SERVER_HOST"] = "0.0.0.0"
     os.environ["FASTMCP_SERVER_PORT"] = "8000"
-    # Use SSE transport to expose the HTTP endpoints ClickUp requires
-    mcp.run(transport="sse")
+    
+    # Using 'streamable-http' transport to expose the standard /mcp endpoint
+    # that ClickUp and other modern MCP clients expect.
+    mcp.run(transport="streamable-http")
