@@ -261,7 +261,7 @@ tables:
         description: Year component of the match date.
       gender:
         type: VARCHAR
-        description: Gender category of the players (constant: male).
+        description: "Gender category of the players (constant: male)."
       team_type:
         type: VARCHAR
         description: Classification of the teams involved.

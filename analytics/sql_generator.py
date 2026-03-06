@@ -1,5 +1,4 @@
-import google.generativeai as genai
-
+from genai import Client
 from analytics.schema_loader import load_schema
 
 
@@ -7,9 +6,7 @@ def generate_sql(question, api_key):
 
     schema = load_schema()
 
-    genai.configure(api_key=api_key)
-
-    model = genai.GenerativeModel("gemini-pro")
+    client = Client(api_key=api_key)
 
     prompt = f"""
 You are a cricket analytics SQL expert.
@@ -28,6 +25,9 @@ Rules:
 - Follow cricket metric definitions
 """
 
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=prompt
+    )
 
     return response.text.strip()

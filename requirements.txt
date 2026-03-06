@@ -2,6 +2,6 @@ duckdb
 pandas
 fastapi
 uvicorn
-google-generativeai
+google-genai
 mcp
 pyyaml
