@@ -46,10 +46,15 @@ Rules:
     
     # Strip markdown code blocks if present
     if sql.startswith("```"):
-        # Remove starting ```sql or ```
-        sql = sql.split("\n", 1)[-1]
-        # Remove ending ```
+        # Remove the first line (e.g., ```sql)
+        lines = sql.splitlines()
+        if len(lines) > 1 and lines[0].startswith("```"):
+            sql = "\n".join(lines[1:])
+        # Remove the last line if it's just closing backticks
         if sql.endswith("```"):
             sql = sql.rsplit("```", 1)[0]
+        # Also handle one-liners like ```sql SELECT ... ```
+        elif "```" in sql:
+             sql = sql.replace("```sql", "").replace("```", "")
     
     return sql.strip()
