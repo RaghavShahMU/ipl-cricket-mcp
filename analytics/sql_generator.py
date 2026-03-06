@@ -1,4 +1,4 @@
-from genai import Client
+from google import genai
 from analytics.schema_loader import load_schema
 
 
@@ -6,7 +6,7 @@ def generate_sql(question, api_key):
 
     schema = load_schema()
 
-    client = Client(api_key=api_key)
+    client = genai.Client(api_key=api_key)
 
     prompt = f"""
 You are a cricket analytics SQL expert.
