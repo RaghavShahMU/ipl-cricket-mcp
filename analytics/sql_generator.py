@@ -31,8 +31,8 @@ User question:
 {question}
 
 Rules:
-- Only generate SQL
-- Only SELECT queries
+- Only generate raw SQL, no markdown formatting (no backticks)
+- Only SELECT or WITH queries
 - Use the balls table
 - Follow cricket metric definitions
 """
@@ -42,4 +42,14 @@ Rules:
         contents=prompt
     )
 
-    return response.text.strip()
+    sql = response.text.strip()
+    
+    # Strip markdown code blocks if present
+    if sql.startswith("```"):
+        # Remove starting ```sql or ```
+        sql = sql.split("\n", 1)[-1]
+        # Remove ending ```
+        if sql.endswith("```"):
+            sql = sql.rsplit("```", 1)[0]
+    
+    return sql.strip()

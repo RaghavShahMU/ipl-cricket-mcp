@@ -19,7 +19,8 @@ def validate_sql(sql_query: str):
                 f"Forbidden SQL operation detected: {keyword}"
             )
 
-    if not upper_sql.strip().startswith("SELECT"):
-        raise ValueError("Only SELECT queries are allowed.")
+    stripped_upper = upper_sql.strip()
+    if not (stripped_upper.startswith("SELECT") or stripped_upper.startswith("WITH")):
+        raise ValueError("Only SELECT and WITH queries are allowed.")
 
     return True
