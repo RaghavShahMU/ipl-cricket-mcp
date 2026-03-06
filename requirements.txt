@@ -5,3 +5,4 @@ uvicorn
 google-genai
 mcp
 pyyaml
+# modelcontextprotocol (official MCP Python SDK is 'mcp')
