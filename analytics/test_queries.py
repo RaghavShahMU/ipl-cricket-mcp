@@ -1,5 +1,8 @@
-from analytics.query_engine import get_top_batsmen
+import sys
+sys.path.append(".")
 
-df = get_top_batsmen()
+from analytics.query_engine import test
+
+df = test()
 
 print(df)
