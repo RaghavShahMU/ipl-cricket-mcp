@@ -2,13 +2,9 @@ name: IPL AI Query Test
 
 on:
 workflow_dispatch:
-push:
-branches:
-- main
 
 jobs:
-
-run-ai-query-test:
+run-test:
 
 ```
 runs-on: ubuntu-latest
@@ -21,42 +17,17 @@ steps:
   - name: Checkout repository
     uses: actions/checkout@v4
 
-
   - name: Setup Python
     uses: actions/setup-python@v5
     with:
       python-version: "3.11"
 
-
   - name: Install dependencies
     run: |
       python -m pip install --upgrade pip
-      pip install duckdb
-      pip install pandas
-      pip install google-generativeai
-      pip install pyyaml
-
-
-  - name: Verify dataset exists
-    run: |
-      echo "Checking dataset..."
-      ls -lh data/
-
-
-  - name: Verify semantic layer
-    run: |
-      echo "Checking semantic schema..."
-      ls -lh semantic_layer/
-      cat semantic_layer/schema.yaml | head -n 40
-
+      pip install duckdb pandas google-generativeai pyyaml
 
   - name: Run AI Query Test
     run: |
-      echo "Running AI SQL generation test..."
       python scripts/test_ai_query.py
-
-
-  - name: Workflow completed
-    run: |
-      echo "AI query workflow finished successfully."
 ```
