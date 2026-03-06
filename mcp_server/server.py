@@ -17,14 +17,16 @@ def ask_cricket_question(question: str):
         "result": result.to_dict(orient="records")
     }
 
-# Create FastAPI app and mount MCP protocol endpoints
+# Create FastAPI app
 app = FastAPI()
-app.mount("/mcp", mcp.streamable_http_app())
-app.mount("/.well-known/mcp", mcp.streamable_http_app())
 
 @app.get("/")
 def health():
     return {"status": "running", "service": "ipl-cricket-analytics"}
+
+# Mount the MCP server - This is the critical fix for routing
+# The internal app from streamable_http_app() handles the protocol endpoints
+app.mount("/mcp", mcp.streamable_http_app())
 
 if __name__ == "__main__":
     import uvicorn
