@@ -1,3 +1,4 @@
+from fastapi import FastAPI
 from mcp.server.fastmcp import FastMCP
 from analytics.ai_query_engine import ask_question
 
@@ -16,6 +17,14 @@ def ask_cricket_question(question: str):
         "result": result.to_dict(orient="records")
     }
 
+# Create FastAPI app and mount MCP
+app = FastAPI()
+app.mount("/mcp", mcp.streamable_http_app())
+
+@app.get("/")
+def health():
+    return {"status": "running", "service": "ipl-cricket-analytics"}
+
 if __name__ == "__main__":
-    # Run the server using SSE transport to expose /mcp and discovery endpoints
-    mcp.run(transport="sse", host="0.0.0.0", port=8000)
+    import uvicorn
+    uvicorn.run("mcp_server.server:app", host="0.0.0.0", port=8000)
