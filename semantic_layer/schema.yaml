@@ -140,7 +140,7 @@ tables:
         description: Sequential match number within the tournament.
       match_number:
         type: VARCHAR
-        description: Alternate match numbering; use with caution for analysis.
+        description: "Alternate match numbering; use with caution for analysis."
       innings:
         type: BIGINT
         description: Innings number (1 or 2; Super Overs may use 3-6).
@@ -213,7 +213,7 @@ tables:
         description: Names of fielders involved in the dismissal.
       runs_target:
         type: DOUBLE
-        description: Target runs required by the chasing team.
+        description: "Target runs required by the chasing team."
       review_batter:
         type: VARCHAR
         description: Batter involved in a DRS review.
@@ -267,19 +267,19 @@ tables:
         description: Classification of the teams involved.
       superover_winner:
         type: VARCHAR
-        description: Winner of the super over, if one occurred.
+        description: "Winner of the super over, if one occurred."
       result_type:
         type: VARCHAR
-        description: Classification of the match result (e.g., normal, tie, DLS).
+        description: "Classification of the match result (e.g., normal, tie, DLS)."
       method:
         type: VARCHAR
-        description: Win method used (e.g., D/L for rain-affected matches).
+        description: "Win method used (e.g., D/L for rain-affected matches)."
       balls_per_over:
         type: BIGINT
-        description: Number of legal deliveries per over (constant: 6).
+        description: "Number of legal deliveries per over (constant: 6)."
       overs:
         type: BIGINT
-        description: Maximum scheduled overs for the innings (standard: 20).
+        description: "Maximum scheduled overs for the innings (standard: 20)."
       team_runs:
         type: BIGINT
         description: Cumulative runs for the batting team at this point in the innings.
@@ -307,7 +307,7 @@ tables:
         description: Tuple representing the current batting pair (e.g., 'V Kohli', 'AB de Villiers').
       next_batter:
         type: VARCHAR
-        description: Predicted next batter; use with caution.
+        description: "Predicted next batter; use with caution."
 
 metrics:
   powerplay:
