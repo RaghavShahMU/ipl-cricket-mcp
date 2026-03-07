@@ -31,10 +31,25 @@ def ask_cricket_question(question: str):
 def batsman_bowler_matchup(batsman: str, bowler: str):
     """
     Analyze the historical matchup between a batsman and a bowler.
+    Resolves player names before querying.
     """
     logger.info(f"Matchup query: {batsman} vs {bowler}")
     
     con = duckdb.connect(DB_PATH, read_only=True)
+    
+    # 1. Resolve Player Names
+    def resolve_name(name, column):
+        # Clean the input for searching
+        search_term = name.strip()
+        # Use partial matches if the name is not found exactly
+        res = con.execute(f"SELECT DISTINCT {column} FROM balls WHERE {column} ILIKE ? LIMIT 1", [f"%{search_term}%"]).fetchone()
+        return res[0] if res else name
+
+    resolved_batsman = resolve_name(batsman, "batter")
+    resolved_bowler = resolve_name(bowler, "bowler")
+    
+    logger.info(f"Resolved batsman: {resolved_batsman}")
+    logger.info(f"Resolved bowler: {resolved_bowler}")
     
     def get_matchup_stats(b_name, bo_name):
         query = f"""
@@ -66,82 +81,25 @@ def batsman_bowler_matchup(batsman: str, bowler: str):
             "dismissals": dismissals,
             "overs": overs,
             "runs_conceded": runs_conceded,
-            "wickets": dismissals, # In a specific head-to-head, dismissals = bowler's wickets
+            "wickets": dismissals,
             "economy": econ
         }
 
-    # Direction 1: batsman batting, bowler bowling
-    v1 = get_matchup_stats(batsman, bowler)
+    # Direction 1: resolved_batsman batting, resolved_bowler bowling
+    v1 = get_matchup_stats(resolved_batsman, resolved_bowler)
     
-    # Direction 2: bowler batting, batsman bowling
-    v2 = get_matchup_stats(bowler, batsman)
+    # Direction 2: resolved_bowler batting, resolved_batsman bowling
+    v2 = get_matchup_stats(resolved_bowler, resolved_batsman)
     
     con.close()
     
-    response = {
-        "batsman": batsman,
-        "bowler": bowler
-    }
-    
-    if v1:
-        response["batsman_vs_bowler"] = {
-            "matches": v1["matches"],
-            "runs": v1["runs"],
-            "balls": v1["balls"],
-            "strike_rate": v1["strike_rate"],
-            "dismissals": v1["dismissals"]
-        }
-        # Also include bowler stats for consistency if you want, 
-        # but the prompt example shows bowler_vs_batsman for the other way.
-        # Wait, the prompt example shows bowler_vs_batsman as a separate section.
-        # Let's align exactly with the example.
-        
-    if v1: # The example shows one way's bowler stats too? 
-           # Ah, the example shows:
-           # "batsman_vs_bowler": { "matches": 14, "runs": 142, "balls": 108, "strike_rate": 131.48, "dismissals": 4 },
-           # "bowler_vs_batsman": { "overs": 18.0, "runs_conceded": 142, "wickets": 4, "economy": 7.88 }
-           # This means v1 (batsman vs bowler) contains BOTH batsman batting and bowler bowling perspectives.
-        
-        # In v1: batsman is batter, bowler is bowler.
-        # So v1 stats cover batsman's performance AND bowler's performance against that batsman.
-        pass
-
-    # Re-arranging to match the user's specific example structure exactly.
     final_resp = {
-        "batsman": batsman,
-        "bowler": bowler
-    }
-    
-    if v1:
-        final_resp["batsman_vs_bowler"] = {
-            "matches": v1["matches"],
-            "runs": v1["runs"],
-            "balls": v1["balls"],
-            "strike_rate": v1["strike_rate"],
-            "dismissals": v1["dismissals"]
+        "batsman": resolved_batsman,
+        "bowler": resolved_bowler,
+        "original_input": {
+            "batsman": batsman,
+            "bowler": bowler
         }
-        final_resp["bowler_stats_against_batsman"] = { # The example uses "bowler_vs_batsman" for the reverse?
-                                                        # No, look at the values: 142 runs, 4 wickets.
-                                                        # These are the same runs/wickets as in batsman_vs_bowler.
-                                                        # So "bowler_vs_batsman" in the example refers to the bowler's stats in that SAME matchup.
-            "overs": v1["overs"],
-            "runs_conceded": v1["runs_conceded"],
-            "wickets": v1["wickets"],
-            "economy": v1["economy"]
-        }
-        # To avoid confusion, I'll name it exactly as in example if possible, 
-        # but the user said "If both players have bowled to each other... return both sections".
-        # This implies "batsman_vs_bowler" is one "pair" of directions, and "bowler_vs_batsman" is the reverse "pair".
-        
-    # Let's pivot:
-    # If batsman vs bowler exists:
-    #   create 'batsman_vs_bowler' summary
-    # If bowler vs batsman exists:
-    #   create 'bowler_vs_batsman' summary
-    
-    final_resp = {
-        "batsman": batsman,
-        "bowler": bowler
     }
     
     if v1:
