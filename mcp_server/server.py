@@ -1,5 +1,6 @@
 from mcp.server.fastmcp import FastMCP
 from analytics.ai_query_engine import ask_question
+from analytics.player_resolver import resolve_player_name_ai
 from starlette.responses import JSONResponse
 from starlette.requests import Request
 import duckdb
@@ -43,7 +44,13 @@ def batsman_bowler_matchup(batsman: str, bowler: str):
         search_term = name.strip()
         # Use partial matches if the name is not found exactly
         res = con.execute(f"SELECT DISTINCT {column} FROM balls WHERE {column} ILIKE ? LIMIT 1", [f"%{search_term}%"]).fetchone()
-        return res[0] if res else name
+        
+        if res:
+            return res[0]
+            
+        # If simple ILIKE fails (e.g. full name vs initials), fallback to AI
+        logger.info(f"Simple resolution failed for {name}, falling back to AI")
+        return resolve_player_name_ai(name, column, con=con)
 
     resolved_batsman = resolve_name(batsman, "batter")
     resolved_bowler = resolve_name(bowler, "bowler")
