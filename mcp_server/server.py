@@ -32,47 +32,56 @@ def ask_cricket_question(question: str):
 def batsman_bowler_matchup(batsman: str, bowler: str):
     """
     Analyze the historical matchup between a batsman and a bowler.
-    Resolves player names before querying.
+    Resolves player names before querying and handles name iterations/variants.
     """
     logger.info(f"Matchup query: {batsman} vs {bowler}")
     
     con = duckdb.connect(DB_PATH, read_only=True)
     
-    # 1. Resolve Player Names
+    # 1. Resolve Player Names (returns list of variants)
     def resolve_name(name, column):
-        # Clean the input for searching
         search_term = name.strip()
-        # Use partial matches if the name is not found exactly
-        res = con.execute(f"SELECT DISTINCT {column} FROM balls WHERE {column} ILIKE ? LIMIT 1", [f"%{search_term}%"]).fetchone()
+        # Find exact or close matches
+        results = con.execute(f"SELECT DISTINCT {column} FROM balls WHERE {column} ILIKE ?", [f"%{search_term}%"]).fetchall()
         
-        if res:
-            return res[0]
+        # If we find an exact match string-wise among variants, prioritize it if it's the only one 
+        # But user wants AI to handle the "iterations" logic.
+        
+        # If the user input is already in initials format and matches exactly, use it.
+        # Otherwise, fall back to AI to resolve full name to dataset initials.
+        
+        if len(results) == 1:
+            return [results[0][0]]
             
-        # If simple ILIKE fails (e.g. full name vs initials), fallback to AI
-        logger.info(f"Simple resolution failed for {name}, falling back to AI")
+        logger.info(f"Simple resolution found {len(results)} variants or failed for {name}, using AI/Reasoning")
+        # Handle iterations/fallbacks in the resolver
         return resolve_player_name_ai(name, column, con=con)
 
-    resolved_batsman = resolve_name(batsman, "batter")
-    resolved_bowler = resolve_name(bowler, "bowler")
+    resolved_batsmen = resolve_name(batsman, "batter")
+    resolved_bowlers = resolve_name(bowler, "bowler")
     
-    logger.info(f"Resolved batsman: {resolved_batsman}")
-    logger.info(f"Resolved bowler: {resolved_bowler}")
+    logger.info(f"Resolved batsman variants: {resolved_batsmen}")
+    logger.info(f"Resolved bowler variants: {resolved_bowlers}")
     
-    def get_matchup_stats(b_name, bo_name):
+    def get_matchup_stats(b_names, bo_names):
+        # b_names and bo_names are lists
         query = f"""
         SELECT 
             COUNT(DISTINCT match_id) as matches,
             CAST(SUM(runs_batter) AS INTEGER) as runs_scored_by_batsman,
             COUNT(*) as balls_faced,
-            CAST(COUNT(CASE WHEN player_out IS NOT NULL AND player_out = batter THEN 1 END) AS INTEGER) as dismissals,
+            CAST(COUNT(CASE WHEN player_out IS NOT NULL AND player_out IN ({','.join(['?' for _ in b_names])}) THEN 1 END) AS INTEGER) as dismissals,
             ROUND(SUM(valid_ball) / 6.0, 2) as overs_bowled,
             CAST(SUM(runs_bowler) AS INTEGER) as runs_conceded
         FROM balls 
-        WHERE batter = ? AND bowler = ?
+        WHERE batter IN ({','.join(['?' for _ in b_names])}) 
+          AND bowler IN ({','.join(['?' for _ in bo_names])})
         """
-        res = con.execute(query, [b_name, bo_name]).fetchone()
+        # Parameters: [all_b_names_for_dismissals, all_b_names_for_batter, all_bo_names_for_bowler]
+        params = b_names + b_names + bo_names
+        res = con.execute(query, params).fetchone()
         
-        if not res or res[2] == 0: # balls_faced is 0
+        if not res or res[2] == 0:
             return None
             
         matches, runs, balls, dismissals, overs, runs_conceded = res
@@ -92,17 +101,17 @@ def batsman_bowler_matchup(batsman: str, bowler: str):
             "economy": econ
         }
 
-    # Direction 1: resolved_batsman batting, resolved_bowler bowling
-    v1 = get_matchup_stats(resolved_batsman, resolved_bowler)
+    # Direction 1: resolved_batsmen batting, resolved_bowlers bowling
+    v1 = get_matchup_stats(resolved_batsmen, resolved_bowlers)
     
-    # Direction 2: resolved_bowler batting, resolved_batsman bowling
-    v2 = get_matchup_stats(resolved_bowler, resolved_batsman)
+    # Direction 2: resolved_bowlers batting, resolved_batsmen bowling
+    v2 = get_matchup_stats(resolved_bowlers, resolved_batsmen)
     
     con.close()
     
     final_resp = {
-        "batsman": resolved_batsman,
-        "bowler": resolved_bowler,
+        "batsman": ", ".join(resolved_batsmen),
+        "bowler": ", ".join(resolved_bowlers),
         "original_input": {
             "batsman": batsman,
             "bowler": bowler
